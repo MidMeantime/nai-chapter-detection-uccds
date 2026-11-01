@@ -1,0 +1,18 @@
+{
+  "name": "uccds",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Universal Customizable Chapter Detection System for NovelAI scripts: an embeddable chapter detector and a dependency script other scripts can call through api.v1.messaging.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node tests/test-chapter-headers.js && node tests/test-uccds-core.js && node tests/test-dependency.js",
+    "check": "npm run build && npm test",
+    "sync": "node scripts/sync-shared.js",
+    "sync:check": "node scripts/sync-shared.js --check"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "author": "MidMeantime",
+  "license": "MIT"
+}
