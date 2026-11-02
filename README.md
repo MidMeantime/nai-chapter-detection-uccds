@@ -4,18 +4,20 @@
 
 UCCDS finds the chapters in a NovelAI story: `# Markdown` headings, `[Chapter 3: Bracketed]` titles, plain `Chapter IV: Echoes` lines, Prologue / Prelude / Interlude / Epilogue, Part / Book / Act / Volume groupings, Roman numerals and spelled-out numbers, scene breaks, while excluding NovelAI metadata brackets (`[ Author: X; Tags: Y ]`) and much more. It's the same system behind **Chapter Linter**, **Markdown Manager** and my **ChatGLM** fork, packaged so any script can use it.
 
-It comes two ways:
+It comes three ways:
 
-| | **Embedded** | **Dependency** |
-| :--- | :--- | :--- |
-| What you add to your script | `dist/uccds-core.ts` (~48 KB) | `dist/uccds-client.ts` (~20 KB) |
-| What your users install | Just your script | Your script **and** the UCCDS script |
-| Where users set chapter rules | Your script's Config tab | Once, in UCCDS. Every UCCDS script follows it |
-| Detection updates | You re-paste and re-release | Users update UCCDS; your script stays the same |
+| | **Embedded** | **Dependency** | **Dual** |
+| :--- | :--- | :--- | :--- |
+| What you add to your script | `dist/uccds-core.ts` (~58 KB) | `dist/uccds-client.ts` (~23 KB) | `dist/uccds-dual.ts` (~77 KB) |
+| What your users install | Just your script | Your script **and** the UCCDS script | Just your script (UCCDS optional) |
+| Where users set chapter rules | Your script's Config tab | Once, in UCCDS. Every UCCDS script follows it | Your Config tab, or UCCDS's if it's installed |
+| Detection updates | You re-paste and re-release | Users update UCCDS; your script stays the same | From UCCDS for users who have it |
+
+**Dual** is "works on its own, plays nice with UCCDS": the detector is built in, and if the user also has the UCCDS script enabled, your script quietly switches to it (and back, if they turn it off).
 
 Both are free to use, change and redistribute. A credit is lovely but never required.
 
-> **Using an AI agent to write your script?** Point it at [`AGENTS.md`](AGENTS.md). It covers both versions, when to pick which, and wires in the user-facing config options by default (tell it if you'd rather skip them).
+> **Using an AI agent to write your script?** Point it at [`AGENTS.md`](AGENTS.md). It covers all three versions, when to pick which, and wires in the user-facing config options by default (tell it if you'd rather skip them).
 
 ---
 
@@ -80,6 +82,26 @@ if (!(await uccdsIsAvailable())) {
 
 Requests use the rules the user set in UCCDS. Pass `settings: { ... }` to override a rule for your script only. See [`examples/dependency/main.ts`](examples/dependency/main.ts).
 
+## Dual: quick start
+
+1. Paste all of [`dist/uccds-dual.ts`](dist/uccds-dual.ts) into your script after its header (instead of the other two files, never alongside them).
+2. Paste the options from [`dist/uccds-config-snippet.yaml`](dist/uccds-config-snippet.yaml) under `config:`. They apply while UCCDS isn't installed; mention in your description that UCCDS's rules win when it is.
+3. Ask for chapters:
+
+```typescript
+let result: UccdsResult | null = null;
+await uccdsDualStart({                       // reads your options, looks for UCCDS in the background
+    onChange: async (reason: UccdsDualChangeReason) => {   // 'source' (UCCDS appeared / went away) or 'chapters'
+        const next = reason === 'source' ? await uccdsDualGetChapters() : await uccdsDualGetChaptersIfChanged(result);
+        if (next) result = next; // ...and redraw
+    }
+});
+result = await uccdsDualGetChapters();
+uccdsDualSource();                           // 'embedded' or 'dependency', if you want to show it
+```
+
+See [`examples/dual/main.ts`](examples/dual/main.ts). **Manuscript Menagerie** uses this version.
+
 The UCCDS script also has a small **UCCDS Chapters** script panel that shows exactly what it detects, which is handy while tuning the options.
 
 ---
@@ -111,10 +133,11 @@ src/uccds-types.ts         result / settings / protocol types
 src/uccds-helpers.ts       pure helpers on results (in both the core and the client)
 src/uccds-core.ts          sections -> chapters, settings, config loading
 src/client/                the dependency client
+src/dual/                  the dual layer (built-in detector + the dependency when it's installed)
 src/service/               the UCCDS dependency script (messaging, change watch, preview panel)
 src/config-snippet.yaml    the user-facing options, injected into headers at build time
 examples/                  one small script per version
-tests/                     parser, segmenter, and dependency+client end-to-end over a mock message bus
+tests/                     parser, segmenter, dependency+client and dual end-to-end over a mock message bus
 tools/                     bundler, strict type check against the official NovelAI types, test harness
 ```
 

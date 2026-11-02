@@ -1,6 +1,6 @@
 # UCCDS: instructions for AI agents
 
-You are adding chapter detection to a NovelAI user script with the **Universal Customizable Chapter Detection System (UCCDS)**. This file tells you which version to use, how to wire it in, and what you get back. Read it fully before writing code. Humans: README.md is the friendlier version of this.
+You are adding chapter detection to a NovelAI user script with the **Universal Customizable Chapter Detection System (UCCDS)**. It comes three ways (embedded, dependency, dual). This file tells you which version to use, how to wire it in, and what you get back. Read it fully before writing code. Humans: README.md is the friendlier version of this.
 
 Everything you paste comes from `dist/`. Never edit the pasted UCCDS code itself: updates are done by pasting the new `dist/` file over the old one, so local edits get lost.
 
@@ -8,22 +8,23 @@ Everything you paste comes from `dist/`. Never edit the pasted UCCDS code itself
 
 ## 1. Pick a version
 
-| | **Embedded** (`dist/uccds-core.ts`) | **Dependency** (`dist/uccds-client.ts` + the UCCDS script) |
-| :--- | :--- | :--- |
-| How it works | The detector is pasted into the script | The script asks the separately installed `UCCDS: Universal Customizable Chapter Detection System` script over `api.v1.messaging` |
-| User installs | Just this script | This script **and** UCCDS (from ScriptVault / Discord / GitHub) |
-| Chapter rules set | In each script's own Config tab | Once, in UCCDS's Config tab, shared by every script that uses it |
-| Calls | Synchronous on a section list, or one `await` for the live document | Every call is an async request that can fail if UCCDS is missing |
-| Size added | ~48 KB | ~20 KB |
-| Updates to detection | Re-paste the new core and re-release | User updates UCCDS; the script needn't change |
+| | **Embedded** (`dist/uccds-core.ts`) | **Dependency** (`dist/uccds-client.ts` + the UCCDS script) | **Dual** (`dist/uccds-dual.ts`) |
+| :--- | :--- | :--- | :--- |
+| How it works | The detector is pasted into the script | The script asks the separately installed `UCCDS: Universal Customizable Chapter Detection System` script over `api.v1.messaging` | Both: the built-in detector, and the UCCDS script whenever it's installed and enabled in the story |
+| User installs | Just this script | This script **and** UCCDS (from ScriptVault / Discord / GitHub) | Just this script; UCCDS is optional |
+| Chapter rules set | In each script's own Config tab | Once, in UCCDS's Config tab, shared by every script that uses it | This script's Config tab, or UCCDS's when it's installed (UCCDS wins) |
+| Calls | Synchronous on a section list, or one `await` for the live document | Every call is an async request that can fail if UCCDS is missing | Async; never fails for a missing UCCDS (falls back to built-in) |
+| Size added | ~58 KB | ~23 KB | ~77 KB |
+| Updates to detection | Re-paste the new core and re-release | User updates UCCDS; the script needn't change | Users with UCCDS get updates from it; others when you re-release |
 
 Choose:
 - The user said which: do that.
-- The script must work on its own, or is going on ScriptVault for people who won't install extras: **embedded**.
-- The user has (or plans) several scripts that should agree on chapters, or wants detection updates without re-releasing: **dependency**.
-- Not stated and you can ask: ask, in one question, with the two-line trade-off above. Not stated and you can't ask: **embedded**, and say so.
+- The script must work on its own, or is going on ScriptVault for people who won't install extras, and nobody mentioned sharing rules with other scripts: **embedded**.
+- The user has (or plans) several scripts that should agree on chapters, or wants detection updates without re-releasing, and is fine requiring UCCDS: **dependency**.
+- The script must work on its own **and** should follow UCCDS when the user has it ("use UCCDS if it's there", "works with or without UCCDS"): **dual**.
+- Not stated and you can ask: ask, in one question, with the trade-off above. Not stated and you can't ask: **embedded**, and say so.
 
-Never paste both files into one script: they share type and helper names and the script won't compile.
+Paste exactly one of the three files. `uccds-core.ts` and `uccds-client.ts` share type and helper names, so pasting both won't compile; `uccds-dual.ts` already contains both, so never paste it alongside either of them.
 
 ## 2. Config options: on by default
 
@@ -33,8 +34,9 @@ By default, let the script's users define what a chapter is. **Add the options f
   - Trim options the script has no use for (e.g. drop `chapter_numbering` if the script never shows numbers). A missing option just uses its default.
   - Option names collide with the user's other config? Rename the `name:` and pass the new name: `uccdsLoadSettings(null, { breakToken: 'my_break_token' })`.
   - Option names `chapter_detection_mode`, `detect_bracketed_titles`, `chapter_break_token`, `chapter_numbering` deliberately match Chapter Linter / Markdown Manager / Manuscript Menagerie, so users who know those scripts see familiar options. Menagerie's `chapter_detection_mode: break_token` value is understood too.
+- **Dual:** add the snippet as for embedded. Those options apply while UCCDS isn't installed; when it is, the user's UCCDS rules apply instead. Say so in the options' descriptions or the script's description, e.g. *"If the UCCDS script is installed, its chapter rules are used instead."* `uccdsDualStart()` reads them with `uccdsLoadSettings()`; pass `loadSettings` to read renamed options.
 - **Dependency:** do **not** add the snippet. The rules live in UCCDS's config and apply to every script. Only add a script option when this script genuinely needs a different rule than the user's global one, and pass it as an override (`settings: {...}`, see §4).
-- **User opted out of config options:** skip the snippet and pass fixed settings in code: `uccdsDetectDocument({ boundaryMode: 'dividers' })` (embedded) or `uccdsGetChapters({ settings: {...} })` (dependency). Anything you don't pass uses the defaults below.
+- **User opted out of config options:** skip the snippet and pass fixed settings in code: `uccdsDetectDocument({ boundaryMode: 'dividers' })` (embedded), `uccdsGetChapters({ settings: {...} })` (dependency), or `uccdsDualStart({ loadSettings: async () => uccdsNormalizeSettings({...}), dependencyOverrides: {...} })` (dual). Anything you don't pass uses the defaults below.
 
 ### Settings (`UccdsSettings`) and their config option names
 
@@ -129,9 +131,54 @@ The pure helpers are in the client too: `uccdsChapterText`, `uccdsChapterAt`, `u
 
 Name rules: as for embedded, minus the `ch`/`CH_` parser names.
 
+## 5. Dual: wiring it in
+
+1. Paste all of `dist/uccds-dual.ts` after the header comment and before the script's own code (and neither of the other two files).
+2. Add the config options (§2, "Dual").
+3. Mention in the description that the UCCDS script is optional and its rules win when it's installed. No permissions are needed.
+4. Use it:
+
+```typescript
+let chapters: UccdsResult | null = null;
+
+async function refresh(force: boolean): Promise<void> {
+    const next = force ? await uccdsDualGetChapters({ includeText: false })
+                       : await uccdsDualGetChaptersIfChanged(chapters, { includeText: false });
+    if (next) { chapters = next; await redraw(); }   // redraw can show uccdsDualSource()
+}
+
+async function init(): Promise<void> {
+    // Loads this script's options, then looks for UCCDS in the background (doesn't wait for it)
+    await uccdsDualStart({
+        onChange: async (reason: UccdsDualChangeReason) => { await refresh(reason === 'source'); }
+    });
+    await refresh(true);
+}
+init().catch((err: any) => api.v1.error("init failed:", err));
+// Built-in mode has no change events (typing has no hook): refresh after generations / undo, or poll
+api.v1.hooks.register("onGenerationEnd", async () => { await refresh(false); });
+api.v1.hooks.register("onHistoryNavigated", async () => { await refresh(false); });
+```
+
+What it does for you:
+- **Start-up never waits for UCCDS.** The first result comes from the built-in detector; if UCCDS answers (now, or later when it loads), the source switches and `onChange('source')` fires.
+- **UCCDS disabled mid-session:** the next `uccdsDualGetChapters*` call falls back to the built-in detector in the same call (and fires `onChange('source')`). **Re-enabled or reloaded:** picked up again automatically.
+- **Chapter changes from UCCDS** arrive as `onChange('chapters')`.
+
+Calls:
+- `uccdsDualStart(options?)`: `loadSettings` (built-in rules; default `uccdsLoadSettings()`), `onChange(reason)` (`'source'` | `'chapters'`), `dependencyOverrides` (rules to override in the user's UCCDS config for this script only; use sparingly). Safe to call twice; later calls only add their `onChange`.
+- `uccdsDualGetChapters(options?)` → `UccdsResult`; `uccdsDualGetChaptersIfChanged(previous, options?)` → `UccdsResult | null`. `options.includeText` (default `true`).
+- `uccdsDualSource()` → `'embedded' | 'dependency'`; `uccdsDualSettings()` → the `UccdsSettings` in effect; `uccdsDualDependencyInfo()` → `{ scriptId, version, protocol }` while UCCDS is the source, else `null`.
+- `uccdsDualOnChange(listener)`, `uccdsDualReloadSettings()` (re-read the built-in rules, e.g. after your own settings UI changed them).
+- Everything from §3 (core, parser, helpers) and §4 (client) is in the file too. Prefer the `uccdsDual*` calls so the fallback logic stays in one place.
+
+Remember a chapter by its `key` (§6), not its position: positions change when the source (and so the rules) switches.
+
+Name rules: as for embedded.
+
 ---
 
-## 5. What you get back
+## 6. What you get back
 
 `UccdsResult`: `chapters`, `settings` (defaults filled in), `hasHeaders`, `restartsPerDivision`, `signature` (equal = identical result), `sectionCount`, `totalWords`, `includesText`.
 
@@ -162,7 +209,7 @@ Chapter under the cursor: `const sel = await api.v1.editor.selection.get(); cons
 
 ---
 
-## 6. Protocol (only if you can't use the client)
+## 7. Protocol (only if you can't use the client)
 
 Channel `"uccds"`, protocol `1`. Requests are `{ type, requestId, protocol: 1, payload }`; broadcast them until you know the dependency's script id (from any reply's `fromScriptId` or a `uccds:ready` broadcast), then `send` to it. Don't hard-code its id.
 
@@ -178,15 +225,15 @@ Replies: `{ type: 'uccds:reply', requestId, protocol, ok, data, error? }`, sent 
 
 ---
 
-## 7. NovelAI reminders that matter here
+## 8. NovelAI reminders that matter here
 
 - Wrap every `await` chain in `try/catch` or `.catch(...)`: rejected promises in the worker are silent.
 - No global `setTimeout`: the client already uses `api.v1.timers`. Use `api.v1.timers.sleep` for your own polling.
 - Annotate every parameter type (`(ch: UccdsChapter) => ...`), cast `Object.entries` results, and type-check the final bundle against the official `script-types.d.ts` before handing it over (`tools/typecheck.js` in this repo does that).
 - Don't keep results in globals across reloads; re-detect on load. Store `key`s, not indexes, if you persist a chapter choice.
-- Typing in the editor has no hook. Embedded scripts that need live updates poll (`await api.v1.timers.sleep(10000)` in a loop, compare `result.signature`); dependency scripts use `uccdsOnChaptersChanged`.
+- Typing in the editor has no hook. Embedded scripts that need live updates poll (`await api.v1.timers.sleep(10000)` in a loop, compare `result.signature`); dependency scripts use `uccdsOnChaptersChanged`; dual scripts get `onChange` while UCCDS is the source and should still refresh after generations / undo (or poll) for when it isn't.
 - When building GLM-4.6 prompts from chapters, label each chapter clearly (`--- [Chapter 3: The Fall] ---`) and keep scene breaks out unless they matter (`dropDividers: true`).
 
-## 8. Credit
+## 9. Credit
 
 MIT licensed: use, change and redistribute freely. A credit line is appreciated, never required, e.g. in the script description: `Chapter detection: UCCDS by MidMeantime`.

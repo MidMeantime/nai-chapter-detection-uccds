@@ -2,6 +2,7 @@
 //   dist/UCCDS_v<version>.naiscript        the dependency script (ScriptVault / Discord / GitHub)
 //   dist/uccds-core.ts                     embeddable source: paste into a script after its header
 //   dist/uccds-client.ts                   client for scripts that use the dependency
+//   dist/uccds-dual.ts                     dual: embedded detector + the dependency when it's installed
 //   dist/uccds-config-snippet.yaml         config options to paste into a script header
 //   dist/examples/*.naiscript              one small example script for each way of using UCCDS
 // Usage: node scripts/build.js
@@ -20,8 +21,11 @@ const TYPES = 'src/uccds-types.ts';
 const HELPERS = 'src/uccds-helpers.ts';
 const CORE = 'src/uccds-core.ts';
 const CLIENT = 'src/client/uccds-client.ts';
+const DUAL = 'src/dual/uccds-dual.ts';
 const CORE_PARTS = [PARSER, TYPES, HELPERS, CORE];
 const CLIENT_PARTS = [TYPES, HELPERS, CLIENT];
+// Dual = core + client (types and helpers once) + the dual layer
+const DUAL_PARTS = [...CORE_PARTS, CLIENT, DUAL];
 
 /** The config snippet without its comment lines, ready to sit under `config:` */
 function configBlock() {
@@ -75,6 +79,10 @@ function build() {
         name: 'UCCDS Example (Dependency)', dir: 'dist/examples',
         parts: ['examples/dependency/header.ts', ...CLIENT_PARTS, 'examples/dependency/main.ts']
     }).target);
+    built.push(buildProject({
+        name: 'UCCDS Example (Dual)', dir: 'dist/examples',
+        parts: [prepareHeader('examples/dual/header.ts'), ...DUAL_PARTS, 'examples/dual/main.ts']
+    }).target);
 
     built.push(writePlain('uccds-core.ts', [
         `// UCCDS v${version}: Universal Customizable Chapter Detection System (embedded version)`,
@@ -89,8 +97,17 @@ function build() {
         '// Needs the "UCCDS: Universal Customizable Chapter Detection System" script installed and enabled.',
         '// Main calls: uccdsIsAvailable(), uccdsGetChapters(), uccdsGetChaptersIfChanged(prev), uccdsOnChaptersChanged(fn).',
         '// Do not paste this AND uccds-core.ts into the same script: they share type and helper names.',
+        '// Want both (built in, and the UCCDS script when it is installed)? Use uccds-dual.ts instead.',
         '// Free to use, share and change (MIT). By MidMeantime: https://storyscriptvault.com/users/MidMeantime'
     ].join('\n'), CLIENT_PARTS));
+    built.push(writePlain('uccds-dual.ts', [
+        `// UCCDS v${version} dual: built-in chapter detection, plus the UCCDS dependency script when it's installed`,
+        '// Paste everything below into your script, after its /*--- ... ---*/ header and before your own code.',
+        '// Add the options from uccds-config-snippet.yaml to your header: they apply while the UCCDS script is not installed.',
+        '// Main calls: uccdsDualStart({ onChange }), uccdsDualGetChapters(), uccdsDualGetChaptersIfChanged(prev), uccdsDualSource().',
+        '// Contains uccds-core.ts and uccds-client.ts: paste this file INSTEAD of those, never alongside them.',
+        '// Free to use, share and change (MIT). By MidMeantime: https://storyscriptvault.com/users/MidMeantime'
+    ].join('\n'), DUAL_PARTS));
     fs.copyFileSync(SNIPPET, path.join(DIST, 'uccds-config-snippet.yaml'));
     console.log('Built dist/uccds-config-snippet.yaml');
 
@@ -101,4 +118,4 @@ function build() {
 
 if (require.main === module) build();
 
-module.exports = { build, CORE_PARTS, CLIENT_PARTS, prepareHeader };
+module.exports = { build, CORE_PARTS, CLIENT_PARTS, DUAL_PARTS, prepareHeader };

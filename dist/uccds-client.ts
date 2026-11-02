@@ -3,6 +3,7 @@
 // Needs the "UCCDS: Universal Customizable Chapter Detection System" script installed and enabled.
 // Main calls: uccdsIsAvailable(), uccdsGetChapters(), uccdsGetChaptersIfChanged(prev), uccdsOnChaptersChanged(fn).
 // Do not paste this AND uccds-core.ts into the same script: they share type and helper names.
+// Want both (built in, and the UCCDS script when it is installed)? Use uccds-dual.ts instead.
 // Free to use, share and change (MIT). By MidMeantime: https://storyscriptvault.com/users/MidMeantime
 
 // --- UCCDS shared types (used by both the embedded core and the dependency client) ---
