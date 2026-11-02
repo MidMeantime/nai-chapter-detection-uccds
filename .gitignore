@@ -1,3 +1,10 @@
 node_modules/
 
-types/
+# NovelAI's scripting types
+/types
+
+# Author's references for releases and such
+/references
+
+# Author's personal changelog for archival purposes
+CHANGELOG.md

@@ -2,7 +2,7 @@
 
 *A scripter's resource for NovelAI.*
 
-UCCDS finds the chapters in a NovelAI story: `# Markdown` headings, `[Chapter 3: Bracketed]` titles, plain `Chapter IV: Echoes` lines, Prologue / Prelude / Interlude / Epilogue, Part / Book / Act / Volume groupings, Roman numerals and spelled-out numbers, scene breaks, while excluding NovelAI metadata brackets (`[ Author: X; Tags: Y ]`) and much more. It's the same system behind **Chapter Linter**, **Markdown Manager** and my **ChatGLM** fork, packaged so any script can use it.
+UCCDS finds the chapters in a NovelAI story: `# Markdown` headings, `[Chapter 3: Bracketed]` titles, plain `Chapter IV: Echoes` lines, Prologue / Prelude / Interlude / Epilogue, Part / Book / Act / Volume groupings, Roman numerals and spelled-out numbers, scene breaks, while excluding NovelAI metadata brackets (`[ Author: X; Tags: Y ]`) and much more.
 
 It comes three ways:
 
@@ -15,7 +15,7 @@ It comes three ways:
 
 **Dual** is "works on its own, plays nice with UCCDS": the detector is built in, and if the user also has the UCCDS script enabled, your script quietly switches to it (and back, if they turn it off).
 
-Both are free to use, change and redistribute. A credit is lovely but never required.
+All pieces of this system are free to use, change and redistribute any way. I'd obviously love a credit if you do, but it's far from required :]
 
 > **Using an AI agent to write your script?** Point it at [`AGENTS.md`](AGENTS.md). It covers all three versions, when to pick which, and wires in the user-facing config options by default (tell it if you'd rather skip them).
 
@@ -46,7 +46,9 @@ The option names match Chapter Linter, Markdown Manager and Manuscript Menagerie
 
 ---
 
-## Embedded: quick start
+## Quick Start
+
+### Embedded
 
 1. Paste all of [`dist/uccds-core.ts`](dist/uccds-core.ts) into your script, right after the `/*--- ... ---*/` header.
 2. Paste the options from [`dist/uccds-config-snippet.yaml`](dist/uccds-config-snippet.yaml) under `config:` in your header (keep only the ones you want).
@@ -62,7 +64,7 @@ for (const ch of result.chapters) {
 
 `uccdsDetectChapters(sections, settings)` does the same on any list of `{ sectionId, text }` (an imported file, say) without touching the document, and `uccdsParseHeader(line, settings)` parses a single line. See [`examples/embedded/main.ts`](examples/embedded/main.ts) for a complete little script.
 
-## Dependency: quick start
+### Dependency
 
 1. Install **UCCDS** ([`dist/UCCDS_v1.0.0.naiscript`](dist/UCCDS_v1.0.0.naiscript), or from ScriptVault) and enable it in your story.
 2. Paste all of [`dist/uccds-client.ts`](dist/uccds-client.ts) into your script after its header. Mention in your description that it needs UCCDS.
@@ -82,7 +84,7 @@ if (!(await uccdsIsAvailable())) {
 
 Requests use the rules the user set in UCCDS. Pass `settings: { ... }` to override a rule for your script only. See [`examples/dependency/main.ts`](examples/dependency/main.ts).
 
-## Dual: quick start
+### Dual
 
 1. Paste all of [`dist/uccds-dual.ts`](dist/uccds-dual.ts) into your script after its header (instead of the other two files, never alongside them).
 2. Paste the options from [`dist/uccds-config-snippet.yaml`](dist/uccds-config-snippet.yaml) under `config:`. They apply while UCCDS isn't installed; mention in your description that UCCDS's rules win when it is.
@@ -125,28 +127,39 @@ Each entry in `result.chapters`:
 
 ---
 
-# Contributing
+## Project Structure
 
 ```
-src/chapter-headers.ts     the header parser (shared with the Editorial scripts)
-src/uccds-types.ts         result / settings / protocol types
-src/uccds-helpers.ts       pure helpers on results (in both the core and the client)
-src/uccds-core.ts          sections -> chapters, settings, config loading
-src/client/                the dependency client
-src/dual/                  the dual layer (built-in detector + the dependency when it's installed)
-src/service/               the UCCDS dependency script (messaging, change watch, preview panel)
-src/config-snippet.yaml    the user-facing options, injected into headers at build time
-examples/                  one small script per version
-tests/                     parser, segmenter, dependency+client and dual end-to-end over a mock message bus
-tools/                     bundler, strict type check against the official NovelAI types, test harness
+src/chapter-headers.ts     # the header parser (shared with the Editorial scripts)
+src/uccds-types.ts         # result / settings / protocol types
+src/uccds-helpers.ts       # pure helpers on results (in both the core and the client)
+src/uccds-core.ts          # sections -> chapters, settings, config loading
+src/client/                # the dependency client
+src/dual/                  # the dual layer (built-in detector + the dependency when it's installed)
+src/service/               # the UCCDS dependency script (messaging, change watch, preview panel)
+src/config-snippet.yaml    # the user-facing options, injected into headers at build time
+examples/                  # one small script per version
+tests/                     # parser, segmenter, dependency+client and dual end-to-end over a mock message bus
+tools/                     # bundler, strict type check against the official NovelAI types, test harness
 ```
+
+## Contributing
+
+Contributions are more than welcome! A full contribution guide with development setup, code style guidelines, and PR process will be released soon.
+
+Feature requests and bug reports are encouraged — please open a [GitHub Issue](https://github.com/MidMeantime/nai-chapter-detection-uccds/issues) or throw me a message in the Discord thread.
 
 ```
 npm install
-npm run check     build everything into dist/, type-check each file, run all tests
+npm run check    # build everything into dist/, type-check each file, run all tests
 ```
-
-Bug reports and ideas: the Discord thread, or open an issue here.
+## Related Projects
+#### Scripts that use UCCDS
+*( feel free to ask to be added to this list! the more the merrier :] )*
+- Chapter Linter — a simple ui for keeping your in-editor chapters neat and tidy
+- Markdown Manager — qol script for painless importing/exporting of your story
+- Manuscript Menagerie — all-in-one workspace for chapter analysis and summaries
+- [ChatGLM v2](https://storyscriptvault.com/scripts/chatglm-v2-NjB10u) (v1 by piersf) — turns GLM into a chatbot to discuss your current story
 
 ## Links
 
